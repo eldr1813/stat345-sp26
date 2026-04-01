@@ -1,0 +1,301 @@
+---
+title: "Midterm Project Nuggets"
+author: "Ethan Leader"
+date: "2026-03-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,     # or FALSE if you don't want the code for all other chunks
+  warning = FALSE, # suppress warnings
+  message = FALSE  # suppress messages
+)
+```
+
+```{r}
+
+# Load libraries
+library(hoopR)
+library(tidyverse)
+library(sportyR)
+library(ggplot2)
+
+# Load play-by-play data
+nba_pbp <- hoopR::load_nba_pbp(2020:2026)
+
+# Denver team ID in your dataset
+denver_id <- 7
+
+# Filter only Denver shots
+nuggets_shots <- nba_pbp %>%
+  filter(
+    shooting_play == TRUE,
+    team_id == denver_id,
+    !is.na(coordinate_x),    # (make sure coordinates exist for the shot to plot)
+    !is.na(coordinate_y)
+  ) %>%
+  mutate(
+    shot_result = case_when(
+      scoring_play == TRUE ~ "Make",
+      scoring_play == FALSE ~ "Miss"
+    )
+  )
+```
+
+```{r nuggets-gif, echo=FALSE, out.width='100%'}
+knitr::include_graphics("nuggets_shot_animation.gif")
+```
+
+## Key Findings
+
+## 1. Shot attempts are heavily concentrated near the basket and in the corners
+
+The densest clusters of shots appear directly under the basket and in both corners. This suggests a strong focus on high-value scoring areas either in  close-range attempts or corner threes, which are typically more efficient than other shot types.
+
+## 2. Three-point shooting is dominated all along the line
+
+There is a clear arc of shot attempts just outside and along the three-point line, with especially high density in the corners and directly in front of the basket.
+
+## 3. Mid-range shots are relatively infrequent
+
+The area between the painted circle in front of the net and the three-point line shows noticeably fewer shot attempts. This indicates that few shot attempts are made here, likely because they are less efficient compared to shots at the rim or from three-point range. Or they are blocked a lot more in other games.
+
+## 4. More Free-throws are made than missed
+
+We can tell from the gif that the red circle, not outlined is smaller than the dark blue filled in circle. Which means that the nuggets make their free-throws more often than they miss them.
+
+## 5. Misses are more spread out than makes
+
+Missed shots appear more dispersed across the court, while made shots tend to cluster in similar areas. This indicates that shot success is more consistent in optimal locations, while lower-percentage areas contribute more to missed attempts.
+
+```{r}
+# Make multiple graphs 
+nuggets_shots_2026 <- nuggets_shots %>%
+  filter(season == 2026)
+
+nuggets_shots_2025 <- nuggets_shots %>%
+  filter(season == 2025)
+
+nuggets_shots_2024 <- nuggets_shots %>%
+  filter(season == 2024)
+
+nuggets_shots_2023 <- nuggets_shots %>%
+  filter(season == 2023)
+
+nuggets_shots_2022 <- nuggets_shots %>%
+  filter(season == 2022)
+
+nuggets_shots_2021 <- nuggets_shots %>%
+  filter(season == 2021)
+
+nuggets_shots_2020 <- nuggets_shots %>%
+  filter(season == 2020)
+
+# Define the court color (originally red but changed to yellow)
+my_red <- "#FEC524"
+
+# NBA court
+court <- geom_basketball(
+  league = "nba",
+  color_updates = list(
+    # Court sections
+    defensive_half_court = my_red,
+    offensive_half_court = my_red,
+    center_circle_fill = my_red,
+    two_point_range = my_red,
+    painted_area = my_red,
+    lane_boundary = my_red,
+    free_throw_circle_fill = my_red,
+    lane_space_mark = my_red,
+    baseline_lower_defensive_box = my_red,
+    team_bench_line = my_red,
+    restricted_arc = my_red
+  )
+)
+
+nuggets_colors <- c("Make" = "midnightblue", "Miss" = "midnightblue")
+
+# Function to plot a season
+plot_nuggets_season <- function(data, season_year) {
+  court +
+    geom_count(
+      data = data,
+      aes(
+        x = coordinate_x,
+        y = coordinate_y,
+        shape = shot_result,
+        color = shot_result
+      ),
+      alpha = 0.6
+    ) +
+    coord_fixed() +
+    scale_shape_manual(values = c("Make" = 16, "Miss" = 1)) + # Filled = Make, Open = Miss
+    scale_color_manual(values = nuggets_colors) +
+    ggtitle(paste0("Denver Nuggets Shot Chart – ", season_year, " Season")) +
+    labs(size = "Number of Shots", shape = "Shot Result", color = "Shot Result") +
+    theme_void()
+}
+
+# Plot each season so a deeper analysis can be made for higher ups (cant print a gif).
+plot_nuggets_season(nuggets_shots_2026, 2026)
+plot_nuggets_season(nuggets_shots_2025, 2025)
+plot_nuggets_season(nuggets_shots_2024, 2024)
+plot_nuggets_season(nuggets_shots_2023, 2023)
+plot_nuggets_season(nuggets_shots_2022, 2022)
+plot_nuggets_season(nuggets_shots_2021, 2021)
+plot_nuggets_season(nuggets_shots_2020, 2020)
+
+
+# Combine all seasons into one dataset
+nuggets_all_seasons <- bind_rows(
+  nuggets_shots_2026,
+  nuggets_shots_2025,
+  nuggets_shots_2024,
+  nuggets_shots_2023,
+  nuggets_shots_2022,
+  nuggets_shots_2021,
+  nuggets_shots_2020
+)
+```
+
+```{r make-gif, eval=FALSE}
+library(gganimate)
+library(gganimate)
+library(gifski)
+library(transformr)
+
+nuggets_colors <- c("Make" = "midnightblue", "Miss" = "darkred") # gif image is easier to differentiate with another color so other nugget color is red because the light blue is hard to see on the yellow.
+
+# Animated shot chart (help with ai here to learn this package and animation)
+animated_plot <- court +
+  geom_count(
+    data = nuggets_shots,
+    aes(
+      x = coordinate_x,
+      y = coordinate_y,
+      shape = shot_result,
+      color = shot_result
+    ),
+    alpha = 0.6
+  ) +
+  coord_fixed() +
+  scale_shape_manual(values = c("Make" = 16, "Miss" = 1)) +
+  scale_color_manual(values = nuggets_colors) +
+  labs(
+    size = "Number of Shots",
+    shape = "Shot Result",
+    color = "Shot Result"
+  ) +
+  ggtitle("Denver Nuggets Shot Chart – {closest_state} Season") +
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold")
+  ) +
+  transition_states(
+    season,
+    transition_length = 2,
+    state_length = 2
+  ) +
+  ease_aes("sine-in-out")
+
+animate(
+  animated_plot,
+  renderer = gifski_renderer(),
+  nframes = 80,
+  fps = 10,
+  width = 800,
+  height = 600
+)
+
+# Save animation as GIF
+anim_save(
+  "nuggets_shot_animation.gif",
+  animation = last_animation()
+)
+
+```
+
+## Key Findings From Year to Year
+
+## 1. Overall Similiar shot space
+
+Across all years. The team has very similar shot attempt trends that were noted previously like near the hoop and around the 3 point line. These all vary slightly from year to year though.
+
+## 2. Shot distance from three point line shrinks.
+
+Although it is mostly just variation from the years, there is a trend from 2020 to 2026 where the three point attempts are a little further and further from the 3 point line. This is likely due to coaching staff finding it more efficient to shoot a little past it. But, could be efficient to run some drills to shoot closer.
+
+## 3. Team struggles to make shots at the end of the round 3-point line
+
+The team has struggled with this in the early years, then slightly get better, then are getting worse again. Where the 3 point line ends curving off and becomes straight many shots are missed there. It might be worth avoiding these areas for shots or running drills to practice here.
+
+
+
+
+
+# Deeper dive
+```{r}
+nuggets_shots_2min <- nuggets_shots %>%
+  filter(season == 2026) %>%
+  # Keep only first 2 min of first half or last 2 min of second half
+  filter(
+    (game_half == 1 & start_half_seconds_remaining >= 1320) |
+    (game_half == 2 & start_half_seconds_remaining <= 120)
+  ) %>%
+  # Create time window and combined facet variable (help with ai here to get facet to work)
+  mutate(
+    time_window = ifelse(game_half == 1, "First 2 Minutes", "Last 2 Minutes"),
+    facet_label = paste(time_window, "-", shot_result)  # for faceting and shot made vs not made
+  )
+
+# Faceted Shot Chart
+time_shot_chart <- court +
+  geom_count(
+    data = nuggets_shots_2min,
+    aes(
+      x = coordinate_x,
+      y = coordinate_y,
+      color = shot_result
+    ),
+    alpha = 0.6
+  ) +
+  coord_fixed() +
+  scale_color_manual(values = nuggets_colors) +
+  facet_wrap(~facet_label, ncol = 2) +
+  labs(
+    title = "Nuggets Shots in First 2 Minutes Vs. Last 2 (2026)",
+    subtitle = "Faceted by time window and shot result",
+    color = "Shot Result",
+    size = "Number of Shots"
+  ) +
+  theme_void() +
+  theme( #ai helped me make this theme
+    plot.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(size = 13, face = "bold"),
+    panel.spacing = unit(1.2, "lines")
+  )
+
+# Display Chart
+time_shot_chart
+```
+
+
+
+  For this graphic I used time as a new variable to compare the shots made and not made in the first 2 minutes of the game to the shots made and not made in the last 2 minutes of the game. Here are my biggest takeaways with this information
+
+## - 2-point shots
+
+  2-point shots are made more often in the last two minutes of the game vs the first two minutes of the game.
+  
+## - 3-point shots
+
+  there are more 3 point shot attempts in the last 2 minutes of the game than in the first 2 minutes. likely due to teams going for big risks in shots to try and regain the lead.
+  
+## - Missed shots
+
+  Shots missed in the last 2 minutes of the game are more scatterd all across the court where the made ones are very clustered. In the first 2 minutes both missed shots and made shots have a similar clustering pattern. 
+  
+## - Free throws
+
+  More free throw attempts are made in the last 2 minutes of the game than the first. I imagine this is because players are under pressure and perform more fouls in the last 2 minutes than in the first.
