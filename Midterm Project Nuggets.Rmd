@@ -7,9 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = FALSE,     # or FALSE if you don't want the code for all other chunks
-  warning = FALSE, # suppress warnings
-  message = FALSE  # suppress messages
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
 )
 ```
 
